@@ -1,0 +1,39 @@
+instanceName=`aws ec2 describe-instances  --region us-west-2 --filters "Name=tag:env_name,Values=jasonb"|jq '.Reservations[].Instances[].InstanceId'| tr -d '"'`
+instanceStatus=`aws ec2 describe-instances  --region us-west-2 --filters "Name=tag:env_name,Values=jasonb"|jq '.Reservations[].Instances[].State.Name'| tr -d '"'`
+
+
+aws ec2 describe-instances  --region us-west-2 --filters "Name=tag:env_name,Values=jasonb"|jq -r "[.Reservations[].Instances[].InstanceId,.Reservations[].Instances[].State.Name]"|jq '.[0]'
+
+
+Consider first:
+
+$ jq -n -r '[1,2,3] | @csv'
+1,2,3
+
+That is probably very close to what you want, but if you want more control, consider:
+
+$ jq -n -r '[1,2,3] | reduce .[1:][] as $i ("\(.[0])"; . + ", \($i)" )'
+1, 2, 3
+
+By the way, some people recommend asking jq usage questions at https://stackoverflow.com/questions/tagged/jq
+
+===========
+
+For the command-shell double quotes need to be escaped with a backslash, but once in a for-loop in a batch-script closing parenthesis also need to be escaped (with the usual circumflex) to prevent the for-loop from closing. Thus:
+
+jq-syntax:    jq -r '[.object1,.object2,.object3] | "\(.[0]) \(.[1]) \(.[2])"'
+cmd-shell:    jq -r "[.object1,.object2,.object3] | \"\(.[0]) \(.[1]) \(.[2])\""
+batch-script: jq -r "[.object1,.object2,.object3] | \"\(.[0]^) \(.[1]^) \(.[2]^)\""
+
+jq-syntax:    jq -r '[.object1,.object2,.object3] | reduce .[1:][] as $i ("\(.[0])"; . + ",\($i)")'
+cmd-shell:    jq -r "[.object1,.object2,.object3] | reduce .[1:][] as $i (\"\(.[0])\"; . + \",\($i)\")"
+batch-script: jq -r "[.object1,.object2,.object3] | reduce .[1:][] as $i (\"\(.[0]^)\"; . + \",\($i^)\")"
+
+Seems logical, but caused me lots of headaches!
+Oh btw, for some reason the comma in the "reduce" command, to separate each value, is ignored in the batch-script. The values are separated by a single space. Not a show-stopper, but still weird though.
+
+    If you have access to a recent version of jq with "@tsv",...
+
+By "recent" I've got a hunch you don't mean the jq 1.4 executable, because it returns jq: error: tsv is not a valid format. If @tsv does the same as the 2 above, could you tell me where to get such a recent version?
+
+
